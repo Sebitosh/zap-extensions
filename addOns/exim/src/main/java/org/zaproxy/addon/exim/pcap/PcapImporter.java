@@ -19,7 +19,12 @@
  */
 package org.zaproxy.addon.exim.pcap;
 
+import io.pkts.streams.TcpStream;
 import java.io.File;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
+import org.parosproxy.paros.network.HttpMessage;
 import org.zaproxy.addon.commonlib.ui.ProgressPaneListener;
 
 public class PcapImporter {
@@ -40,6 +45,19 @@ public class PcapImporter {
     private boolean importPcapFile(File file) {
         // no import logic implemented yet
         return false;
+    }
+
+    protected static List<HttpMessage> getHttpMessages(File pcapFile) {
+        List<HttpMessage> httpMessages = new LinkedList<>();
+        Collection<TcpStream> httpStreams = PcapUtils.extractHttpStreams(pcapFile);
+
+        for (TcpStream httpStream : httpStreams) {
+            String requestFlow = PcapUtils.getHttpRequestFlow(httpStream);
+            String responseFlow = PcapUtils.getHttpResponseFlow(httpStream);
+            httpMessages.addAll(PcapUtils.constructHttpMessages(requestFlow, responseFlow));
+        }
+
+        return httpMessages;
     }
 
     public boolean isSuccess() {
