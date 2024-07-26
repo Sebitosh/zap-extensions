@@ -62,7 +62,7 @@ dependencies {
     implementation(files("lib/pkts-core-3.0.11-tcp-streams-branch.jar"))
     implementation(files("lib/pkts-streams-3.0.11-tcp-streams-branch.jar"))
     implementation(files("lib/pkts-buffers-3.0.11-tcp-streams-branch.jar"))
-    implementation("io.hektor:hektor-fsm:0.0.8")
+    implementation("io.hektor:hektor-fsm:0.0.5")
 
     testImplementation(parent!!.childProjects.get("commonlib")!!.sourceSets.test.get().output)
     testImplementation(project(":testutils"))
