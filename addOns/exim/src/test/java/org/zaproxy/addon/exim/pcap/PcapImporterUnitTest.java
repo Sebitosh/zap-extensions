@@ -23,12 +23,15 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
+import java.util.List;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.parosproxy.paros.network.HttpMessage;
+import org.zaproxy.zap.testutils.TestUtils;
 
 /** Unit test for {@link PcapImporter}. */
-class PcapImporterUnitTest {
+class PcapImporterUnitTest extends TestUtils {
     // no tests implemented yet
 
     @BeforeAll
@@ -38,7 +41,23 @@ class PcapImporterUnitTest {
     static void cleanup() {}
 
     @Test
-    void skeletonTest() {
-        assertThat(true, is(equalTo(true)));
+    void shouldHaveValidAndCompleteHttp1Messages() {
+        List<HttpMessage> messages =
+                PcapImporter.getHttpMessages(getResourcePath("http1.1SmallAndClean.pcap").toFile());
+
+        assertThat(messages.get(0).isResponseFromTargetHost(), is(equalTo(true)));
+        assertThat(
+                messages.get(0).getRequestHeader().getURI().toString(),
+                is(equalTo("http://www.ethereal.com/download.html")));
+        assertThat(messages.get(0).getRequestBody().length(), is(equalTo(0)));
+        assertThat(messages.get(0).getResponseHeader().getStatusCode(), is(equalTo(200)));
+        assertThat(messages.get(0).getResponseBody().getCharset(), is(equalTo("ISO-8859-1")));
+
+        assertThat(messages.get(1).isResponseFromTargetHost(), is(equalTo(true)));
+        assertThat(
+                messages.get(1).getRequestHeader().getURI().toString().length(), is(equalTo(282)));
+        assertThat(messages.get(1).getRequestBody().length(), is(equalTo(0)));
+        assertThat(messages.get(1).getResponseHeader().getStatusCode(), is(equalTo(200)));
+        assertThat(messages.get(1).getResponseBody().getCharset(), is(equalTo("ISO-8859-1")));
     }
 }
