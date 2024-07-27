@@ -53,15 +53,11 @@ public class PcapImporter {
 
         for (TcpStream httpStream : httpStreams) {
             String requestFlow = PcapUtils.getHttpRequestFlow(httpStream);
-            String responseFlow = PcapUtils.getHttpResponseFlow(httpStream);
+            byte[] responseFlow = PcapUtils.getHttpResponseFlow(httpStream);
             httpMessages.addAll(PcapUtils.constructHttpMessages(requestFlow, responseFlow));
         }
 
         return httpMessages;
-    }
-
-    public boolean isSuccess() {
-        return success;
     }
 
     private void completed() {

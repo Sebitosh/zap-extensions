@@ -25,9 +25,11 @@ import io.pkts.streams.StreamId;
 import io.pkts.streams.TcpStream;
 import io.pkts.streams.impl.TcpStreamHandler;
 import io.pkts.streams.impl.TransportStreamId;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -109,25 +111,26 @@ public final class PcapUtils {
         return requestFlow.toString();
     }
 
-    public static String getHttpResponseFlow(TcpStream stream) {
+    public static byte[] getHttpResponseFlow(TcpStream stream) {
         List<TCPPacket> tcpPackets = stream.getPackets();
-        StringBuilder responseFlow = new StringBuilder();
+        ByteArrayOutputStream responseFlow = new ByteArrayOutputStream();
         TransportStreamId responseDirection =
                 new TransportStreamId(tcpPackets.get(0))
                         .oppositeFlowDirection(); // server is receiving connection
         for (TCPPacket tcpPacket : tcpPackets) {
             if (tcpPacket.getPayload() != null
                     && responseDirection.equals(new TransportStreamId(tcpPacket))) {
-                responseFlow.append(
-                        tcpPacket
-                                .getPayload()
-                                .toString()); // naively reassemble the server responses
+                try {
+                    responseFlow.write(tcpPacket.getPayload().getArray());
+                } catch (IOException e) {
+                    LOGGER.error("Failed to write response payload: " + e.getMessage());
+                }
             }
         }
-        return responseFlow.toString();
+        return responseFlow.toByteArray();
     }
 
-    public static List<HttpMessage> constructHttpMessages(String requestFlow, String responseFlow) {
+    public static List<HttpMessage> constructHttpMessages(String requestFlow, byte[] responseFlow) {
         List<HttpMessage> requestsMessages = constructHttpRequests(requestFlow);
         return constructHttpResponses(responseFlow, requestsMessages);
     }
@@ -164,25 +167,26 @@ public final class PcapUtils {
         return requests;
     }
 
-    private static List<HttpMessage> constructHttpResponses(
-            String responseFlow, List<HttpMessage> requests) {
+    public static List<HttpMessage> constructHttpResponses(
+            byte[] responseFlow, List<HttpMessage> requests) {
         List<HttpMessage> messages = new ArrayList<>();
-        ArrayList<String> flow = new ArrayList<>(List.of(responseFlow.split("\r\n\r\n")));
+        List<byte[]> flow = splitByteArray(responseFlow, "\r\n\r\n".getBytes());
 
         int reqIndex = 0;
-        ListIterator<String> flowIt = flow.listIterator();
+        ListIterator<byte[]> flowIt = flow.listIterator();
         while (flowIt.hasNext()) {
             HttpResponseHeader resHeader = new HttpResponseHeader();
             HttpResponseBody resBody = new HttpResponseBody();
             try {
-                resHeader = new HttpResponseHeader(flowIt.next());
+                resHeader = new HttpResponseHeader(new String(flowIt.next()));
                 if (flowIt.hasNext()) {
                     try {
-                        HttpResponseHeader lookahead = new HttpResponseHeader(flowIt.next());
+                        HttpResponseHeader lookahead =
+                                new HttpResponseHeader(new String(flowIt.next()));
                         flowIt.previous();
                     } catch (HttpMalformedHeaderException e) {
                         flowIt.previous();
-                        resBody = new HttpResponseBody(flowIt.next().getBytes());
+                        resBody = new HttpResponseBody(flowIt.next());
                     }
                 }
             } catch (HttpMalformedHeaderException e) {
@@ -200,5 +204,31 @@ public final class PcapUtils {
             }
         }
         return messages;
+    }
+
+    private static List<byte[]> splitByteArray(byte[] array, byte[] delimiter) {
+        List<byte[]> result = new ArrayList<>();
+        int start = 0;
+        int matchIndex;
+
+        while ((matchIndex = indexOf(array, delimiter, start)) != -1) {
+            result.add(Arrays.copyOfRange(array, start, matchIndex));
+            start = matchIndex + delimiter.length;
+        }
+        result.add(Arrays.copyOfRange(array, start, array.length));
+        return result;
+    }
+
+    private static int indexOf(byte[] array, byte[] target, int start) {
+        outer:
+        for (int i = start; i <= array.length - target.length; i++) {
+            for (int j = 0; j < target.length; j++) {
+                if (array[i + j] != target[j]) {
+                    continue outer;
+                }
+            }
+            return i;
+        }
+        return -1;
     }
 }

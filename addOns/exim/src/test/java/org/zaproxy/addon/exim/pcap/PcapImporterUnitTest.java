@@ -45,19 +45,29 @@ class PcapImporterUnitTest extends TestUtils {
         List<HttpMessage> messages =
                 PcapImporter.getHttpMessages(getResourcePath("http1.1SmallAndClean.pcap").toFile());
 
-        assertThat(messages.get(0).isResponseFromTargetHost(), is(equalTo(true)));
-        assertThat(
-                messages.get(0).getRequestHeader().getURI().toString(),
-                is(equalTo("http://www.ethereal.com/download.html")));
-        assertThat(messages.get(0).getRequestBody().length(), is(equalTo(0)));
-        assertThat(messages.get(0).getResponseHeader().getStatusCode(), is(equalTo(200)));
-        assertThat(messages.get(0).getResponseBody().getCharset(), is(equalTo("ISO-8859-1")));
+        assertThat(messages.size(), is(equalTo(2)));
 
-        assertThat(messages.get(1).isResponseFromTargetHost(), is(equalTo(true)));
+        HttpMessage firstMessage = messages.get(0);
+        HttpMessage secondMessage = messages.get(1);
+
+        assertThat(firstMessage.isResponseFromTargetHost(), is(equalTo(true)));
         assertThat(
-                messages.get(1).getRequestHeader().getURI().toString().length(), is(equalTo(282)));
-        assertThat(messages.get(1).getRequestBody().length(), is(equalTo(0)));
-        assertThat(messages.get(1).getResponseHeader().getStatusCode(), is(equalTo(200)));
-        assertThat(messages.get(1).getResponseBody().getCharset(), is(equalTo("ISO-8859-1")));
+                firstMessage.getRequestHeader().getURI().toString(),
+                is(equalTo("http://www.ethereal.com/download.html")));
+        assertThat(firstMessage.getRequestBody().length(), is(equalTo(0)));
+        assertThat(firstMessage.getResponseHeader().getStatusCode(), is(equalTo(200)));
+        assertThat(firstMessage.getResponseBody().getCharset(), is(equalTo("ISO-8859-1")));
+        assertThat(
+                firstMessage.getResponseHeader().getContentLength(),
+                is(equalTo(firstMessage.getResponseBody().length())));
+
+        assertThat(secondMessage.isResponseFromTargetHost(), is(equalTo(true)));
+        assertThat(secondMessage.getRequestHeader().getURI().toString().length(), is(equalTo(282)));
+        assertThat(secondMessage.getRequestBody().length(), is(equalTo(0)));
+        assertThat(secondMessage.getResponseHeader().getStatusCode(), is(equalTo(200)));
+        assertThat(secondMessage.getResponseBody().getCharset(), is(equalTo("ISO-8859-1")));
+        assertThat(
+                secondMessage.getResponseHeader().getContentLength(),
+                is(equalTo(secondMessage.getResponseBody().length())));
     }
 }
