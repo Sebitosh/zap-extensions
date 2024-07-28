@@ -22,17 +22,23 @@ package org.zaproxy.addon.exim.pcap;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.parosproxy.paros.network.HttpMessage;
+import org.zaproxy.addon.commonlib.ui.ProgressPaneListener;
 import org.zaproxy.zap.testutils.TestUtils;
 
 /** Unit test for {@link PcapImporter}. */
 class PcapImporterUnitTest extends TestUtils {
-    // no tests implemented yet
 
     @BeforeAll
     static void setup() {}
@@ -41,14 +47,16 @@ class PcapImporterUnitTest extends TestUtils {
     static void cleanup() {}
 
     @Test
-    void shouldHaveValidAndCompleteHttp1Messages() {
+    void shouldHaveValidAndCompleteHttp1Messages() throws IOException {
+        // Given
+        File file = getResourcePath("http1.1SmallAndClean.pcap").toFile();
+        //When
         List<HttpMessage> messages =
-                PcapImporter.getHttpMessages(getResourcePath("http1.1SmallAndClean.pcap").toFile());
-
-        assertThat(messages.size(), is(equalTo(2)));
-
+                PcapImporter.getHttpMessages(file);
         HttpMessage firstMessage = messages.get(0);
         HttpMessage secondMessage = messages.get(1);
+        //Then
+        assertThat(messages.size(), is(equalTo(2)));
 
         assertThat(firstMessage.isResponseFromTargetHost(), is(equalTo(true)));
         assertThat(
@@ -69,5 +77,37 @@ class PcapImporterUnitTest extends TestUtils {
         assertThat(
                 secondMessage.getResponseHeader().getContentLength(),
                 is(equalTo(secondMessage.getResponseBody().length())));
+    }
+
+    @Test
+    void shouldBeFailureIfFileNotFound(@TempDir Path dir) {
+        // Given
+        File file = dir.resolve("missing.pcap").toFile();
+        // When
+        PcapImporter importer = new PcapImporter(file);
+        // Then
+        assertThat(importer.isSuccess(), equalTo(false));
+    }
+
+    @Test
+    void shouldCompleteListenerIfFileNotFound(@TempDir Path dir){
+        // Given
+        File file = dir.resolve("missing.pcap").toFile();
+        ProgressPaneListener listener = mock(ProgressPaneListener.class);
+        // When
+        PcapImporter importer = new PcapImporter(file, listener);
+        // Then
+        assertThat(importer.isSuccess(), equalTo(false));
+        verify(listener).completed();
+    }
+
+    @Test
+    void shouldSucceedIfValidFile(){
+        // Given
+        File file = getResourcePath("http1.1SmallAndClean.pcap").toFile();
+        //When
+        PcapImporter importer = new PcapImporter(file);
+        //Then
+        assertThat(importer.isSuccess(), equalTo(true));
     }
 }

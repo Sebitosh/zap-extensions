@@ -48,20 +48,17 @@ public final class PcapUtils {
 
     private static final Logger LOGGER = LogManager.getLogger(PcapUtils.class);
 
-    public static Map<StreamId, TcpStream> extractTcpStreams(File pcapFile) {
+    private static Map<StreamId, TcpStream> extractTcpStreams(File pcapFile) throws IOException {
         TcpStreamHandler streamHandler = new TcpStreamHandler();
-        try {
-            final Pcap pcap = Pcap.openStream(pcapFile);
-            pcap.loop(streamHandler);
-            pcap.close();
-        } catch (IOException e) {
-            LOGGER.error("Failed to open pcap file: " + e.getMessage());
-        }
+
+        final Pcap pcap = Pcap.openStream(pcapFile);
+        pcap.loop(streamHandler);
+        pcap.close();
 
         return streamHandler.getStreams();
     }
 
-    public static Collection<TcpStream> extractHttpStreams(File pcapFile) {
+    public static Collection<TcpStream> extractHttpStreams(File pcapFile) throws IOException {
         Map<StreamId, TcpStream> tcpStreams = extractTcpStreams(pcapFile);
         Collection<TcpStream> httpStreams = new LinkedList<>();
         Collection<TcpStream> streams = tcpStreams.values();
@@ -167,7 +164,7 @@ public final class PcapUtils {
         return requests;
     }
 
-    public static List<HttpMessage> constructHttpResponses(
+    private static List<HttpMessage> constructHttpResponses(
             byte[] responseFlow, List<HttpMessage> requests) {
         List<HttpMessage> messages = new ArrayList<>();
         List<byte[]> flow = splitByteArray(responseFlow, "\r\n\r\n".getBytes());
